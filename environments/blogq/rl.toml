@@ -1,0 +1,58 @@
+# GRPO on geogym blogq, the configuration Finch 0.1 was trained with: one round = 20 steps of
+# 128 questions x 8 samples, binary grounded reward, difficulty-matched bank, judge in the loop.
+# Two GPUs (1 inference, 1 trainer); the judge runs elsewhere (JUDGE_BASE_URL).
+# Needs TOPOLOOP_KEY and JUDGE_BASE_URL / JUDGE_MODEL / JUDGE_KEY in the environment.
+#
+#   uv run rl @ environments/blogq/rl.toml
+
+max_steps = 20
+seq_len = 16384
+
+[deployment]
+num_train_gpus = 1
+num_infer_gpus = 1
+
+[model]
+name = "Qwen/Qwen3.5-0.8B"          # Finch started from an SFT checkpoint of this; see the blog post
+
+[monitors.wandb]
+project = "geogym-blogq"
+name = "round-1"
+
+[trainer.optim]
+lr = 1e-6
+weight_decay = 0.0
+
+[orchestrator]
+batch_size = 1024
+
+[orchestrator.train]
+group_size = 8
+
+[orchestrator.renderer]
+name = "qwen3.5"
+enable_thinking = false             # trained and evaluated with the empty <think> block prefilled
+
+[orchestrator.train.sampling]
+max_completion_tokens = 1500
+temperature = 0.7
+
+[[orchestrator.train.source]]
+name = "geogym-blogq"
+curriculum = { gates = { zero_advantage = { type = "advantage_range" } } }
+env.taskset.id = "geogym-blogq"
+env.taskset.bank = "eval/ask_maps_basic.jsonl"   # REPLACE with your training bank, same JSONL format as this file;
+                                                 # never train on the questions you evaluate on
+env.taskset.seed = 41
+env.agent.max_turns = 11
+env.agent.harness.id = "null"
+env.agent.runtime.type = "subprocess"
+
+[ckpt]
+interval = 10
+
+[inference.vllm]
+tool_call_parser = "qwen3_coder"
+max_model_len = 20480
+enforce_eager = true
+gpu_memory_utilization = 0.85

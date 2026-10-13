@@ -1,0 +1,28 @@
+# Evaluate a model on geogym blogq against a local inference server
+# (`uv run inference --vllm.model Qwen/Qwen3.5-0.8B --vllm.tool-call-parser qwen3_coder`).
+# Override the model with `-m` to evaluate a checkpoint (`-m topoloop/finch-0.1-0.8B`).
+# Needs TOPOLOOP_KEY and JUDGE_BASE_URL / JUDGE_MODEL / JUDGE_KEY in the environment.
+#
+#   uv run eval @ environments/blogq/eval.toml
+
+model = "Qwen/Qwen3.5-0.8B"
+group_size = 1
+
+[select]
+limit = 100
+
+[client]
+base_url = "http://localhost:8000/v1"
+
+[sampling]
+max_completion_tokens = 1500
+temperature = 0.0
+
+[[source]]
+name = "geogym-blogq"
+env.taskset.id = "geogym-blogq"
+env.taskset.bank = "eval/ask_maps_basic.jsonl"   # Ask Maps Basic; or your own bank
+env.taskset.shuffle = false
+env.agent.max_turns = 11
+env.agent.harness.id = "null"
+env.agent.runtime.type = "subprocess"
